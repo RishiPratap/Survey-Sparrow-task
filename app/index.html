@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>A Template App</title>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" type="text/css" href="./styles/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js"></script>
+</head>
+<body>
+  <div class="main">
+    <div class="survey-form-container">
+      <h2>In this survey, we will ask you a couple questions about your impressions of our product.</h2>
+      <form id="surveyForm">
+        <div class="form-group">
+          <label for="firstName">First Name:</label>
+          <input type="text" id="firstName" name="firstName" required>
+        </div>
+        <div class="form-group">
+          <label for="lastName">Last Name:</label>
+          <input type="text" id="lastName" name="lastName" required>
+        </div>
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label for="phoneNumber">Phone Number:</label>
+          <input type="tel" id="phoneNumber" name="phoneNumber" required>
+        </div>
+        <div class="form-group">
+          <label for="satisfactionScore">How would you describe your experience with our product?</label>
+          <select id="satisfactionScore" name="satisfactionScore" required>
+            <option value="">Select</option>
+            <option value="5">Fully satisfying</option>
+            <option value="4">Generally satisfying</option>
+            <option value="3">Neutral</option>
+            <option value="2">Rather unsatisfying</option>
+            <option value="1">Not satisfying at all</option>
+          </select>
+        </div>
+        <div class="form-group" id="whatWouldMakeYouMoreSatisfiedGroup" style="display: none;">
+          <label for="whatWouldMakeYouMoreSatisfied">What can we do to make your experience more satisfying?</label>
+          <textarea id="whatWouldMakeYouMoreSatisfied" name="whatWouldMakeYouMoreSatisfied"></textarea>
+        </div>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+    <div id="dataVisualization" style="display: none;">
+      <h2>Survey Report</h2>
+      <!-- Data visualization will be displayed here -->
+      <canvas id="myChart"></canvas>
+  </div>
+  </div>
+  
+  <!-- Firebase JavaScript library -->
+  <script type="module">
+    // Import necessary Firebase modules
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js';
+    import { getFirestore, collection, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js';
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyDBIKUPajRfC3Ea6bdlwOrkD-k4HrM4_Nw",
+  authDomain: "survey-sparrow-3c801.firebaseapp.com",
+  projectId: "survey-sparrow-3c801",
+  storageBucket: "survey-sparrow-3c801.appspot.com",
+  messagingSenderId: "121439625397",
+  appId: "1:121439625397:web:92dd47408feb6824655efc",
+  measurementId: "G-G3K5RFPW9B"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const satisfactionScoreSelect = document.getElementById('satisfactionScore');
+      const whatWouldMakeYouMoreSatisfiedGroup = document.getElementById('whatWouldMakeYouMoreSatisfiedGroup');
+      const dataVisualization = document.getElementById('dataVisualization');
+      const myChartCanvas = document.getElementById('myChart').getContext('2d');
+      let myChart; 
+
+      satisfactionScoreSelect.addEventListener('change', function() {
+        if (satisfactionScoreSelect.value >= 4) {
+          whatWouldMakeYouMoreSatisfiedGroup.style.display = 'block';
+        } else {
+          whatWouldMakeYouMoreSatisfiedGroup.style.display = 'none';
+        }
+      });
+
+      const surveyForm = document.getElementById('surveyForm');
+      surveyForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(surveyForm);
+        const data = {
+          firstName: formData.get('firstName'),
+          lastName: formData.get('lastName'),
+          email: formData.get('email'),
+          phoneNumber: formData.get('phoneNumber'),
+          satisfactionScore: formData.get('satisfactionScore'),
+          whatWouldMakeYouMoreSatisfied: formData.get('whatWouldMakeYouMoreSatisfied')
+        };
+
+        try {
+          const docRef = await addDoc(collection(db, 'surveys'), data);
+          console.log("Document written with ID: ", docRef.id);
+          surveyForm.reset();
+          alert('Survey submitted successfully!');
+           // Fetch data from Firestore
+           const querySnapshot = await getDocs(collection(db, 'surveys'));
+          const fetchedData = querySnapshot.docs.map(doc => doc.data());
+          const satisfactionScores = fetchedData.map(entry => entry.satisfactionScore);
+
+          // Display data visualization
+          dataVisualization.style.display = 'block';
+
+          if (myChart) {
+                        myChart.destroy();
+                    }
+
+          myChart = new Chart(myChartCanvas, {
+                        type: 'bar',
+                        data: {
+                            labels: ['1', '2', '3', '4', '5'], // Labels for satisfaction scores
+                            datasets: [{
+                                label: 'Satisfaction Scores',
+                                data: satisfactionScores, // Data points for satisfaction scores
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+
+        } catch (error) {
+          console.error("Error adding document: ", error);
+          alert('Error submitting survey. Please try again later.');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
